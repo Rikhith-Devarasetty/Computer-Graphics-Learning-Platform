@@ -1,0 +1,175 @@
+Act as software developer with 20years of experience and write the code without error for given prompt below:
+
+
+
+You are an expert full-stack web developer and computer-graphics instructor.
+
+Build a single-page HTML/CSS/JS web application that visually teaches one of the following computer graphics concepts (choose any one):
+
+
+
+2D Transformations — interactively translate / rotate / scale a square and show the 3×3 transformation matrix in real time.
+
+
+
+Bresenham’s Line Algorithm — step-by-step integer-based line rasterization with grid and animation controls.
+
+
+
+Color Model Explorer (RGB ↔ HSV) — interactive bidirectional conversion with sliders and real-time color preview.
+
+
+
+✅ Shared Requirements for All Versions
+
+
+
+Must work as a single-page HTML file (with embedded CSS + JS).
+
+
+
+Use HTML5 <canvas> where applicable.
+
+
+
+Clear, intuitive UI with live visual feedback.
+
+
+
+Display relevant numerical data (matrix values, step info, or color values).
+
+
+
+Include a short on-page explanation suitable for students.
+
+
+
+Clean, modular JavaScript + comments for learning.
+
+
+
+Provide Reset button + helpful UI labels.
+
+
+
+Include instructions on how to run locally.
+
+
+
+No frameworks; only vanilla HTML/CSS/JS.
+
+
+
+✅ Details per Possible Topic
+
+
+
+(A) 2D Transformations
+
+
+
+Show square + axes + grid on canvas.
+
+
+
+UI controls: translate X/Y, rotate (degrees), scale X/Y.
+
+
+
+Display T, R, S matrices and combined M = T · R · S (3×3) numerically.
+
+
+
+Show original + transformed vertex coordinates in a small table.
+
+
+
+Allow changing matrix multiplication order (dropdown).
+
+
+
+Keyboard shortcuts: arrows translate; [ ] rotate; Shift+arrows scale.
+
+
+
+(B) Bresenham’s Line Algorithm
+
+
+
+Overlay integer grid; choose start & end via click or input.
+
+
+
+Animate algorithm; show current pixel + error term.
+
+
+
+Table showing each step: (x, y), err value, decision.
+
+
+
+Controls: play/pause, step, speed slider, reset.
+
+
+
+Option: compare Bresenham vs DDA.
+
+
+
+Button to generate random start/end pairs.
+
+
+
+(C) Color Model Explorer (RGB ↔ HSV)
+
+
+
+RGB sliders (0-255) + HSV sliders (H:0-360, S/V:0-100%).
+
+
+
+Changing either space updates the other.
+
+
+
+Large color preview + hex display.
+
+
+
+Include 2D hue/sat or sat/val selection panel.
+
+
+
+Buttons: Copy Hex, Random, Reset.
+
+
+
+Compute WCAG contrast ratio vs text color; show AA/AAA pass/fail.
+
+
+
+✅ Deliverables
+
+
+
+A single HTML file with all needed CSS + JS included.
+
+
+
+Modular, well-commented code.
+
+
+
+Brief explanation section + improvement ideas.
+
+
+
+After coding, provide:
+
+
+
+The full HTML file.
+
+
+
+Optional suggestions for next-step enhancements.
