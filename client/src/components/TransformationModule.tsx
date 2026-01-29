@@ -3,8 +3,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { RotateCcw } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { RotateCcw, Edit3, Sliders } from "lucide-react";
 
 export default function TransformationModule() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -14,10 +16,30 @@ export default function TransformationModule() {
   const [scaleX, setScaleX] = useState(1);
   const [scaleY, setScaleY] = useState(1);
   const [matrixOrder, setMatrixOrder] = useState("TRS");
+  const [inputMode, setInputMode] = useState<"sliders" | "custom">("sliders");
+
+  const [customMatrix, setCustomMatrix] = useState<number[][]>([
+    [1, 0, 0],
+    [0, 1, 0],
+    [0, 0, 1]
+  ]);
 
   const originalVertices = [
     [-50, -50], [50, -50], [50, 50], [-50, 50]
   ];
+
+  const clampValue = (value: number, min: number, max: number): number => {
+    return Math.max(min, Math.min(max, value));
+  };
+
+  const updateCustomMatrix = (row: number, col: number, value: string) => {
+    const numValue = parseFloat(value) || 0;
+    const clampedValue = clampValue(numValue, -10, 10);
+    const newMatrix = customMatrix.map((r, i) => 
+      i === row ? r.map((c, j) => j === col ? clampedValue : c) : [...r]
+    );
+    setCustomMatrix(newMatrix);
+  };
 
   const reset = () => {
     setTranslateX(0);
@@ -25,6 +47,11 @@ export default function TransformationModule() {
     setRotation(0);
     setScaleX(1);
     setScaleY(1);
+    setCustomMatrix([
+      [1, 0, 0],
+      [0, 1, 0],
+      [0, 0, 1]
+    ]);
   };
 
   const createTranslationMatrix = (tx: number, ty: number): number[][] => [
@@ -74,6 +101,10 @@ export default function TransformationModule() {
   };
 
   const getCombinedMatrix = (): number[][] => {
+    if (inputMode === "custom") {
+      return customMatrix;
+    }
+
     const T = createTranslationMatrix(translateX, translateY);
     const R = createRotationMatrix(rotation);
     const S = createScaleMatrix(scaleX, scaleY);
@@ -142,15 +173,16 @@ export default function TransformationModule() {
     ctx.stroke();
 
     ctx.restore();
-  }, [translateX, translateY, rotation, scaleX, scaleY, matrixOrder]);
+  }, [translateX, translateY, rotation, scaleX, scaleY, matrixOrder, customMatrix, inputMode]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (inputMode !== "sliders") return;
       const step = 5;
-      if (e.key === 'ArrowLeft') setTranslateX(prev => prev - step);
-      if (e.key === 'ArrowRight') setTranslateX(prev => prev + step);
-      if (e.key === 'ArrowUp') setTranslateY(prev => prev - step);
-      if (e.key === 'ArrowDown') setTranslateY(prev => prev + step);
+      if (e.key === 'ArrowLeft' && !e.shiftKey) setTranslateX(prev => prev - step);
+      if (e.key === 'ArrowRight' && !e.shiftKey) setTranslateX(prev => prev + step);
+      if (e.key === 'ArrowUp' && !e.shiftKey) setTranslateY(prev => prev - step);
+      if (e.key === 'ArrowDown' && !e.shiftKey) setTranslateY(prev => prev + step);
       if (e.key === '[') setRotation(prev => prev - 5);
       if (e.key === ']') setRotation(prev => prev + 5);
       if (e.shiftKey && e.key === 'ArrowLeft') setScaleX(prev => Math.max(0.1, prev - 0.1));
@@ -161,12 +193,14 @@ export default function TransformationModule() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [inputMode]);
 
   const T = createTranslationMatrix(translateX, translateY);
   const R = createRotationMatrix(rotation);
   const S = createScaleMatrix(scaleX, scaleY);
   const M = getCombinedMatrix();
+
+  const transformedVertices = originalVertices.map(v => transformPoint(v, M));
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -174,86 +208,181 @@ export default function TransformationModule() {
         <Card>
           <CardHeader className="space-y-1">
             <CardTitle className="text-lg">Controls</CardTitle>
-            <CardDescription>Adjust transformation parameters</CardDescription>
+            <CardDescription>Choose input mode</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label className="text-sm font-medium">Translate X: {translateX}px</Label>
-                <Slider
-                  value={[translateX]}
-                  onValueChange={([val]) => setTranslateX(val)}
-                  min={-150}
-                  max={150}
-                  step={1}
-                  data-testid="slider-translate-x"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-sm font-medium">Translate Y: {translateY}px</Label>
-                <Slider
-                  value={[translateY]}
-                  onValueChange={([val]) => setTranslateY(val)}
-                  min={-150}
-                  max={150}
-                  step={1}
-                  data-testid="slider-translate-y"
-                />
-              </div>
-            </div>
+          <CardContent>
+            <Tabs value={inputMode} onValueChange={(v) => setInputMode(v as "sliders" | "custom")}>
+              <TabsList className="grid w-full grid-cols-2 mb-4">
+                <TabsTrigger value="sliders" className="gap-2" data-testid="tab-sliders">
+                  <Sliders className="w-4 h-4" />
+                  Sliders
+                </TabsTrigger>
+                <TabsTrigger value="custom" className="gap-2" data-testid="tab-custom">
+                  <Edit3 className="w-4 h-4" />
+                  Custom
+                </TabsTrigger>
+              </TabsList>
 
-            <div className="space-y-2">
-              <Label className="text-sm font-medium">Rotation: {rotation}°</Label>
-              <Slider
-                value={[rotation]}
-                onValueChange={([val]) => setRotation(val)}
-                min={-180}
-                max={180}
-                step={1}
-                data-testid="slider-rotation"
-              />
-            </div>
+              <TabsContent value="sliders" className="space-y-6 mt-0">
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Translate X: {translateX}px</Label>
+                    <Slider
+                      value={[translateX]}
+                      onValueChange={([val]) => setTranslateX(val)}
+                      min={-150}
+                      max={150}
+                      step={1}
+                      data-testid="slider-translate-x"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Translate Y: {translateY}px</Label>
+                    <Slider
+                      value={[translateY]}
+                      onValueChange={([val]) => setTranslateY(val)}
+                      min={-150}
+                      max={150}
+                      step={1}
+                      data-testid="slider-translate-y"
+                    />
+                  </div>
+                </div>
 
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label className="text-sm font-medium">Scale X: {scaleX.toFixed(2)}</Label>
-                <Slider
-                  value={[scaleX]}
-                  onValueChange={([val]) => setScaleX(val)}
-                  min={0.1}
-                  max={3}
-                  step={0.1}
-                  data-testid="slider-scale-x"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-sm font-medium">Scale Y: {scaleY.toFixed(2)}</Label>
-                <Slider
-                  value={[scaleY]}
-                  onValueChange={([val]) => setScaleY(val)}
-                  min={0.1}
-                  max={3}
-                  step={0.1}
-                  data-testid="slider-scale-y"
-                />
-              </div>
-            </div>
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Rotation: {rotation}°</Label>
+                  <Slider
+                    value={[rotation]}
+                    onValueChange={([val]) => setRotation(val)}
+                    min={-180}
+                    max={180}
+                    step={1}
+                    data-testid="slider-rotation"
+                  />
+                </div>
 
-            <div className="space-y-2">
-              <Label className="text-sm font-medium">Matrix Order</Label>
-              <Select value={matrixOrder} onValueChange={setMatrixOrder}>
-                <SelectTrigger data-testid="select-matrix-order">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="TRS">T · R · S</SelectItem>
-                  <SelectItem value="TSR">T · S · R</SelectItem>
-                  <SelectItem value="RTS">R · T · S</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Scale X: {scaleX.toFixed(2)}</Label>
+                    <Slider
+                      value={[scaleX]}
+                      onValueChange={([val]) => setScaleX(val)}
+                      min={0.1}
+                      max={3}
+                      step={0.1}
+                      data-testid="slider-scale-x"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Scale Y: {scaleY.toFixed(2)}</Label>
+                    <Slider
+                      value={[scaleY]}
+                      onValueChange={([val]) => setScaleY(val)}
+                      min={0.1}
+                      max={3}
+                      step={0.1}
+                      data-testid="slider-scale-y"
+                    />
+                  </div>
+                </div>
 
-            <Button onClick={reset} className="w-full" variant="outline" data-testid="button-reset">
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Matrix Order</Label>
+                  <Select value={matrixOrder} onValueChange={setMatrixOrder}>
+                    <SelectTrigger data-testid="select-matrix-order">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="TRS">T · R · S</SelectItem>
+                      <SelectItem value="TSR">T · S · R</SelectItem>
+                      <SelectItem value="RTS">R · T · S</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="custom" className="space-y-4 mt-0">
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Custom 3×3 Matrix</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Enter values between -10 and 10
+                  </p>
+                </div>
+                
+                <div className="grid gap-2">
+                  {customMatrix.map((row, i) => (
+                    <div key={i} className="grid grid-cols-3 gap-2">
+                      {row.map((val, j) => (
+                        <Input
+                          key={`${i}-${j}`}
+                          type="number"
+                          value={val}
+                          onChange={(e) => updateCustomMatrix(i, j, e.target.value)}
+                          className="text-center text-sm h-10 font-mono"
+                          step={0.1}
+                          min={-10}
+                          max={10}
+                          data-testid={`matrix-input-${i}-${j}`}
+                        />
+                      ))}
+                    </div>
+                  ))}
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 pt-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCustomMatrix([
+                      [1, 0, 0],
+                      [0, 1, 0],
+                      [0, 0, 1]
+                    ])}
+                    data-testid="button-identity"
+                  >
+                    Identity
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCustomMatrix([
+                      [1, 0.5, 0],
+                      [0, 1, 0],
+                      [0, 0, 1]
+                    ])}
+                    data-testid="button-shear-x"
+                  >
+                    Shear X
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCustomMatrix([
+                      [1, 0, 0],
+                      [0.5, 1, 0],
+                      [0, 0, 1]
+                    ])}
+                    data-testid="button-shear-y"
+                  >
+                    Shear Y
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCustomMatrix([
+                      [-1, 0, 0],
+                      [0, 1, 0],
+                      [0, 0, 1]
+                    ])}
+                    data-testid="button-reflect-x"
+                  >
+                    Reflect X
+                  </Button>
+                </div>
+              </TabsContent>
+            </Tabs>
+
+            <Button onClick={reset} className="w-full mt-4" variant="outline" data-testid="button-reset">
               <RotateCcw className="w-4 h-4 mr-2" />
               Reset
             </Button>
@@ -271,10 +400,29 @@ export default function TransformationModule() {
             <canvas
               ref={canvasRef}
               width={600}
-              height={500}
+              height={400}
               className="w-full border rounded-md bg-background"
               data-testid="canvas-transformation"
             />
+          </CardContent>
+        </Card>
+
+        <Card className="mt-4">
+          <CardHeader>
+            <CardTitle className="text-sm">Vertex Coordinates</CardTitle>
+            <CardDescription>Original → Transformed</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-4 gap-2 text-xs font-mono">
+              {originalVertices.map((v, i) => (
+                <div key={i} className="p-2 bg-muted rounded text-center">
+                  <div className="text-muted-foreground">V{i + 1}</div>
+                  <div>({v[0]}, {v[1]})</div>
+                  <div className="text-primary">→</div>
+                  <div>({transformedVertices[i][0].toFixed(1)}, {transformedVertices[i][1].toFixed(1)})</div>
+                </div>
+              ))}
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -286,30 +434,41 @@ export default function TransformationModule() {
             <CardDescription>3×3 transformation matrices</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label className="text-xs font-medium text-muted-foreground">Translation (T)</Label>
-              <pre className="text-xs font-mono bg-muted p-3 rounded-md overflow-x-auto" data-testid="matrix-translation">
-                {formatMatrix(T)}
-              </pre>
-            </div>
-            <div className="space-y-2">
-              <Label className="text-xs font-medium text-muted-foreground">Rotation (R)</Label>
-              <pre className="text-xs font-mono bg-muted p-3 rounded-md overflow-x-auto" data-testid="matrix-rotation">
-                {formatMatrix(R)}
-              </pre>
-            </div>
-            <div className="space-y-2">
-              <Label className="text-xs font-medium text-muted-foreground">Scale (S)</Label>
-              <pre className="text-xs font-mono bg-muted p-3 rounded-md overflow-x-auto" data-testid="matrix-scale">
-                {formatMatrix(S)}
-              </pre>
-            </div>
-            <div className="space-y-2">
-              <Label className="text-xs font-medium text-muted-foreground">Combined (M = {matrixOrder})</Label>
-              <pre className="text-xs font-mono bg-muted p-3 rounded-md overflow-x-auto" data-testid="matrix-combined">
-                {formatMatrix(M)}
-              </pre>
-            </div>
+            {inputMode === "sliders" ? (
+              <>
+                <div className="space-y-2">
+                  <Label className="text-xs font-medium text-muted-foreground">Translation (T)</Label>
+                  <pre className="text-xs font-mono bg-muted p-3 rounded-md overflow-x-auto" data-testid="matrix-translation">
+                    {formatMatrix(T)}
+                  </pre>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs font-medium text-muted-foreground">Rotation (R)</Label>
+                  <pre className="text-xs font-mono bg-muted p-3 rounded-md overflow-x-auto" data-testid="matrix-rotation">
+                    {formatMatrix(R)}
+                  </pre>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs font-medium text-muted-foreground">Scale (S)</Label>
+                  <pre className="text-xs font-mono bg-muted p-3 rounded-md overflow-x-auto" data-testid="matrix-scale">
+                    {formatMatrix(S)}
+                  </pre>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs font-medium text-muted-foreground">Combined (M = {matrixOrder})</Label>
+                  <pre className="text-xs font-mono bg-muted p-3 rounded-md overflow-x-auto" data-testid="matrix-combined">
+                    {formatMatrix(M)}
+                  </pre>
+                </div>
+              </>
+            ) : (
+              <div className="space-y-2">
+                <Label className="text-xs font-medium text-muted-foreground">Custom Matrix (M)</Label>
+                <pre className="text-xs font-mono bg-muted p-3 rounded-md overflow-x-auto" data-testid="matrix-custom">
+                  {formatMatrix(customMatrix)}
+                </pre>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -321,6 +480,7 @@ export default function TransformationModule() {
             <div>Arrow keys: Translate</div>
             <div>[ / ]: Rotate</div>
             <div>Shift + Arrows: Scale</div>
+            <div className="text-xs text-muted-foreground/70 pt-1">(Only in Slider mode)</div>
           </CardContent>
         </Card>
       </div>
@@ -334,11 +494,13 @@ export default function TransformationModule() {
             <p>
               2D transformations are fundamental operations in computer graphics that allow you to manipulate objects
               in 2D space. Using 3×3 matrices in homogeneous coordinates, we can represent translation, rotation,
-              and scaling transformations, as well as combine them through matrix multiplication.
+              scaling, shearing, and reflection transformations.
             </p>
             <p>
-              The order of matrix multiplication matters! Try different orders (T·R·S vs R·T·S) to see how the
-              final result changes. Generally, transformations are applied right-to-left in the matrix multiplication.
+              <strong>Custom Matrix Mode:</strong> Enter any values between -10 and 10 to create custom transformations.
+              Try the preset buttons for common operations like shearing (skewing the shape) or reflection (mirroring).
+              The matrix multiplication order matters! Try different orders (T·R·S vs R·T·S) in slider mode to see how the
+              final result changes.
             </p>
           </CardContent>
         </Card>

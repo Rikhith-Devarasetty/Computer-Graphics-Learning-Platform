@@ -5,12 +5,13 @@ import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Copy, RotateCcw, Shuffle } from "lucide-react";
+import { Copy, RotateCcw, Shuffle, RotateCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 export default function ColorExplorerModule() {
   const { toast } = useToast();
   const pickerRef = useRef<HTMLCanvasElement>(null);
+  const hsv3dRef = useRef<HTMLCanvasElement>(null);
   
   const [r, setR] = useState(128);
   const [g, setG] = useState(100);
@@ -21,6 +22,9 @@ export default function ColorExplorerModule() {
   const [v, setV] = useState(0);
   
   const [updatingFrom, setUpdatingFrom] = useState<'rgb' | 'hsv' | null>(null);
+  
+  const [rotation3d, setRotation3d] = useState(0);
+  const [isAutoRotating, setIsAutoRotating] = useState(false);
 
   const rgbToHsv = (r: number, g: number, b: number) => {
     r /= 255;
@@ -137,6 +141,131 @@ export default function ColorExplorerModule() {
     ctx.stroke();
   }, [h, s, v]);
 
+  useEffect(() => {
+    const canvas = hsv3dRef.current;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const width = canvas.width;
+    const height = canvas.height;
+    const centerX = width / 2;
+    const centerY = height / 2 + 20;
+    const radius = Math.min(width, height) / 3;
+
+    ctx.clearRect(0, 0, width, height);
+
+    const rotRad = (rotation3d * Math.PI) / 180;
+    const cosR = Math.cos(rotRad);
+    const sinR = Math.sin(rotRad);
+
+    const project3D = (x: number, y: number, z: number): [number, number] => {
+      const rotatedX = x * cosR - z * sinR;
+      const rotatedZ = x * sinR + z * cosR;
+      
+      const scale = 0.8;
+      const projX = rotatedX * scale;
+      const projY = y * scale - rotatedZ * 0.3;
+      
+      return [centerX + projX, centerY - projY];
+    };
+
+    const segments = 24;
+    const valueSteps = 5;
+    const satSteps = 5;
+
+    for (let vi = 0; vi < valueSteps; vi++) {
+      const valLevel = (vi / (valueSteps - 1)) * 100;
+      const levelY = (vi / (valueSteps - 1)) * radius * 1.5 - radius * 0.75;
+      const levelRadius = radius * (valLevel / 100);
+
+      for (let i = 0; i < segments; i++) {
+        const hue1 = (i / segments) * 360;
+        const hue2 = ((i + 1) / segments) * 360;
+        const angle1 = (i / segments) * Math.PI * 2;
+        const angle2 = ((i + 1) / segments) * Math.PI * 2;
+
+        for (let si = 0; si < satSteps; si++) {
+          const sat1 = ((si) / satSteps) * 100;
+          const sat2 = ((si + 1) / satSteps) * 100;
+          const r1 = levelRadius * (sat1 / 100);
+          const r2 = levelRadius * (sat2 / 100);
+
+          const x1a = Math.cos(angle1) * r1;
+          const z1a = Math.sin(angle1) * r1;
+          const x2a = Math.cos(angle2) * r1;
+          const z2a = Math.sin(angle2) * r1;
+          const x1b = Math.cos(angle1) * r2;
+          const z1b = Math.sin(angle1) * r2;
+          const x2b = Math.cos(angle2) * r2;
+          const z2b = Math.sin(angle2) * r2;
+
+          const avgHue = (hue1 + hue2) / 2;
+          const avgSat = (sat1 + sat2) / 2;
+          const rgb = hsvToRgb(avgHue, avgSat, valLevel);
+
+          const [px1a, py1a] = project3D(x1a, levelY, z1a);
+          const [px2a, py2a] = project3D(x2a, levelY, z2a);
+          const [px1b, py1b] = project3D(x1b, levelY, z1b);
+          const [px2b, py2b] = project3D(x2b, levelY, z2b);
+
+          ctx.fillStyle = `rgb(${rgb.r}, ${rgb.g}, ${rgb.b})`;
+          ctx.beginPath();
+          ctx.moveTo(px1a, py1a);
+          ctx.lineTo(px2a, py2a);
+          ctx.lineTo(px2b, py2b);
+          ctx.lineTo(px1b, py1b);
+          ctx.closePath();
+          ctx.fill();
+        }
+      }
+    }
+
+    const currentHueRad = (h / 360) * Math.PI * 2;
+    const currentValLevel = (v / 100) * radius * 1.5 - radius * 0.75;
+    const currentLevelRadius = radius * (v / 100);
+    const currentSatRadius = currentLevelRadius * (s / 100);
+    const currentX3D = Math.cos(currentHueRad) * currentSatRadius;
+    const currentZ3D = Math.sin(currentHueRad) * currentSatRadius;
+    const [markerX, markerY] = project3D(currentX3D, currentValLevel, currentZ3D);
+
+    ctx.fillStyle = 'white';
+    ctx.strokeStyle = 'black';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(markerX, markerY, 8, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
+    ctx.beginPath();
+    ctx.arc(markerX, markerY, 5, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = 'hsl(var(--muted-foreground))';
+    ctx.font = '11px sans-serif';
+    ctx.textAlign = 'center';
+    
+    ctx.fillText('Value ↑', centerX, 25);
+    ctx.fillText('0%', centerX, height - 8);
+    ctx.fillText('100%', centerX, 40);
+    
+    const hueLabel1 = project3D(radius + 15, 0, 0);
+    ctx.fillText('H=0°', hueLabel1[0], hueLabel1[1]);
+
+  }, [h, s, v, r, g, b, rotation3d]);
+
+  useEffect(() => {
+    if (!isAutoRotating) return;
+
+    const interval = setInterval(() => {
+      setRotation3d(prev => (prev + 1) % 360);
+    }, 50);
+
+    return () => clearInterval(interval);
+  }, [isAutoRotating]);
+
   const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
     const canvas = pickerRef.current;
     if (!canvas) return;
@@ -199,6 +328,8 @@ export default function ColorExplorerModule() {
     setR(128);
     setG(100);
     setB(200);
+    setRotation3d(0);
+    setIsAutoRotating(false);
   };
 
   return (
@@ -348,7 +479,7 @@ export default function ColorExplorerModule() {
           </CardHeader>
           <CardContent className="space-y-6">
             <div
-              className="w-full h-64 rounded-md border flex items-center justify-center"
+              className="w-full h-48 rounded-md border flex items-center justify-center"
               style={{ backgroundColor: `rgb(${r}, ${g}, ${b})` }}
               data-testid="color-preview"
             >
@@ -385,22 +516,63 @@ export default function ColorExplorerModule() {
           </CardContent>
         </Card>
 
-        <Card className="mt-4">
-          <CardHeader>
-            <CardTitle className="text-lg">2D Hue/Saturation Picker</CardTitle>
-            <CardDescription>Click to select saturation and value</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <canvas
-              ref={pickerRef}
-              width={400}
-              height={300}
-              className="w-full border rounded-md cursor-crosshair"
-              onClick={handleCanvasClick}
-              data-testid="canvas-color-picker"
-            />
-          </CardContent>
-        </Card>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">2D Saturation/Value Picker</CardTitle>
+              <CardDescription>Click to select saturation and value</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <canvas
+                ref={pickerRef}
+                width={300}
+                height={200}
+                className="w-full border rounded-md cursor-crosshair"
+                onClick={handleCanvasClick}
+                data-testid="canvas-color-picker"
+              />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-lg">3D HSV Cone</CardTitle>
+                  <CardDescription>Interactive HSV color space</CardDescription>
+                </div>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setIsAutoRotating(!isAutoRotating)}
+                  data-testid="button-auto-rotate"
+                >
+                  <RotateCw className={`w-4 h-4 ${isAutoRotating ? 'animate-spin' : ''}`} />
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <canvas
+                ref={hsv3dRef}
+                width={300}
+                height={250}
+                className="w-full border rounded-md bg-background"
+                data-testid="canvas-hsv-3d"
+              />
+              <div className="space-y-2">
+                <Label className="text-xs">Rotation: {rotation3d}°</Label>
+                <Slider
+                  value={[rotation3d]}
+                  onValueChange={([val]) => { setIsAutoRotating(false); setRotation3d(val); }}
+                  min={0}
+                  max={360}
+                  step={1}
+                  data-testid="slider-3d-rotation"
+                />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
 
         <Card className="mt-4">
           <CardHeader>
@@ -444,10 +616,10 @@ export default function ColorExplorerModule() {
               in various intensities (0-255).
             </p>
             <p>
-              HSV represents colors using Hue (0-360°, the color type), Saturation (0-100%, color intensity), and
-              Value (0-100%, brightness). HSV is often more intuitive for artists and designers as it separates color
-              information from brightness. The conversion between these models uses mathematical formulas that preserve
-              the visual appearance of colors.
+              The <strong>3D HSV Cone</strong> visualizes the HSV color space in three dimensions: Hue is represented
+              around the circular base (0-360°), Saturation extends from the center outward, and Value goes from bottom
+              (dark) to top (bright). The white marker shows your current color position in this 3D space. Use the
+              rotation slider or auto-rotate button to explore the full color space.
             </p>
           </CardContent>
         </Card>
