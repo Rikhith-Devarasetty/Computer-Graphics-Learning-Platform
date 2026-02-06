@@ -17,6 +17,7 @@ export default function TransformationModule() {
   const [scaleY, setScaleY] = useState(1);
   const [matrixOrder, setMatrixOrder] = useState("TRS");
   const [inputMode, setInputMode] = useState<"sliders" | "custom">("sliders");
+  const [axisView, setAxisView] = useState<"both" | "x" | "y">("both");
 
   const [customMatrix, setCustomMatrix] = useState<number[][]>([
     [1, 0, 0],
@@ -166,20 +167,24 @@ export default function TransformationModule() {
     const origin = transformPoint([0, 0], combinedMatrix);
 
     // X-axis (Red)
-    ctx.strokeStyle = '#ef4444';
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.moveTo(origin[0], origin[1]);
-    ctx.lineTo(xAxisEnd[0], xAxisEnd[1]);
-    ctx.stroke();
+    if (axisView === "both" || axisView === "x") {
+      ctx.strokeStyle = '#ef4444';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(origin[0], origin[1]);
+      ctx.lineTo(xAxisEnd[0], xAxisEnd[1]);
+      ctx.stroke();
+    }
 
     // Y-axis (Green)
-    ctx.strokeStyle = '#22c55e';
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.moveTo(origin[0], origin[1]);
-    ctx.lineTo(yAxisEnd[0], yAxisEnd[1]);
-    ctx.stroke();
+    if (axisView === "both" || axisView === "y") {
+      ctx.strokeStyle = '#22c55e';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(origin[0], origin[1]);
+      ctx.lineTo(yAxisEnd[0], yAxisEnd[1]);
+      ctx.stroke();
+    }
 
     const transformedVertices = originalVertices.map(v => transformPoint(v, combinedMatrix));
 
@@ -196,7 +201,7 @@ export default function TransformationModule() {
     ctx.stroke();
 
     ctx.restore();
-  }, [translateX, translateY, rotation, scaleX, scaleY, matrixOrder, customMatrix, inputMode]);
+  }, [translateX, translateY, rotation, scaleX, scaleY, matrixOrder, customMatrix, inputMode, axisView]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -415,9 +420,18 @@ export default function TransformationModule() {
 
       <div className="lg:col-span-6">
         <Card className="h-full">
-          <CardHeader>
-            <CardTitle className="text-lg">Canvas Visualization</CardTitle>
-            <CardDescription>Original (dashed) and transformed (filled) square</CardDescription>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0">
+            <div>
+              <CardTitle className="text-lg">Canvas Visualization</CardTitle>
+              <CardDescription>Visual representation of the transformation</CardDescription>
+            </div>
+            <Tabs value={axisView} onValueChange={(v) => setAxisView(v as "both" | "x" | "y")}>
+              <TabsList className="grid w-full grid-cols-3 h-8">
+                <TabsTrigger value="both" className="text-xs">Both</TabsTrigger>
+                <TabsTrigger value="x" className="text-xs">X-Axis</TabsTrigger>
+                <TabsTrigger value="y" className="text-xs">Y-Axis</TabsTrigger>
+              </TabsList>
+            </Tabs>
           </CardHeader>
           <CardContent>
             <canvas
