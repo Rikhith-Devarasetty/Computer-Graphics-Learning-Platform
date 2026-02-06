@@ -230,6 +230,17 @@ export default function ColorExplorerModule() {
     const currentZ3D = Math.sin(currentHueRad) * currentSatRadius;
     const [markerX, markerY] = project3D(currentX3D, currentValLevel, currentZ3D);
 
+    // Draw projection line to the base of the cone (black center)
+    const [originX, originY] = project3D(0, -radius * 0.75, 0);
+    ctx.setLineDash([3, 3]);
+    ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, 0.6)`;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(markerX, markerY);
+    ctx.lineTo(originX, originY);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
     ctx.fillStyle = 'white';
     ctx.strokeStyle = 'black';
     ctx.lineWidth = 2;
