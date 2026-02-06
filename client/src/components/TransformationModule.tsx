@@ -158,6 +158,29 @@ export default function TransformationModule() {
     ctx.setLineDash([]);
 
     const combinedMatrix = getCombinedMatrix();
+
+    // Draw transformed X and Y axes
+    const axisLength = 100;
+    const xAxisEnd = transformPoint([axisLength, 0], combinedMatrix);
+    const yAxisEnd = transformPoint([0, axisLength], combinedMatrix);
+    const origin = transformPoint([0, 0], combinedMatrix);
+
+    // X-axis (Red)
+    ctx.strokeStyle = '#ef4444';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(origin[0], origin[1]);
+    ctx.lineTo(xAxisEnd[0], xAxisEnd[1]);
+    ctx.stroke();
+
+    // Y-axis (Green)
+    ctx.strokeStyle = '#22c55e';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(origin[0], origin[1]);
+    ctx.lineTo(yAxisEnd[0], yAxisEnd[1]);
+    ctx.stroke();
+
     const transformedVertices = originalVertices.map(v => transformPoint(v, combinedMatrix));
 
     ctx.fillStyle = 'hsl(var(--primary) / 0.3)';
@@ -481,6 +504,16 @@ export default function TransformationModule() {
             <div>[ / ]: Rotate</div>
             <div>Shift + Arrows: Scale</div>
             <div className="text-xs text-muted-foreground/70 pt-1">(Only in Slider mode)</div>
+            <div className="pt-2 flex flex-col gap-1">
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-0.5 bg-[#ef4444]" />
+                <span>Transformed X-Axis</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-0.5 bg-[#22c55e]" />
+                <span>Transformed Y-Axis</span>
+              </div>
+            </div>
           </CardContent>
         </Card>
       </div>
