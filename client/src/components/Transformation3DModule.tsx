@@ -81,6 +81,21 @@ export default function Transformation3DModule() {
       ];
     };
 
+    ctx.strokeStyle = '#333';
+    ctx.lineWidth = 0.5;
+    ctx.setLineDash([2, 2]);
+    for (let i = -150; i <= 150; i += 50) {
+      if (i === 0) continue;
+      // Grid on XY plane at Z=0
+      const [x1, y1] = project(i, -150, 0);
+      const [x2, y2] = project(i, 150, 0);
+      ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+      const [x3, y3] = project(-150, i, 0);
+      const [x4, y4] = project(150, i, 0);
+      ctx.beginPath(); ctx.moveTo(x3, y3); ctx.lineTo(x4, y4); ctx.stroke();
+    }
+    ctx.setLineDash([]);
+
     ctx.strokeStyle = 'hsl(var(--primary))';
     ctx.lineWidth = 2;
     edges.forEach(([start, end]) => {
@@ -112,48 +127,60 @@ export default function Transformation3DModule() {
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-      <div className="lg:col-span-4 space-y-6">
+      <div className="lg:col-span-4 space-y-4">
         <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Translation (T)</CardTitle>
+          <CardHeader className="py-3">
+            <CardTitle className="text-sm">Translation (T)</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            {[['X', tx, setTx], ['Y', ty, setTy], ['Z', tz, setTz]].map(([label, val, set]) => (
-              <div key={label as string} className="space-y-2">
-                <Label className="text-xs">{label} Offset: {val as number}px</Label>
-                <Slider value={[val as number]} onValueChange={([v]) => (set as any)(v)} min={-150} max={150} step={1} />
+          <CardContent className="space-y-3 pb-4">
+            {[
+              { label: 'X', val: tx, set: setTx },
+              { label: 'Y', val: ty, set: setTy },
+              { label: 'Z', val: tz, set: setTz }
+            ].map((item) => (
+              <div key={item.label} className="space-y-1">
+                <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">{item.label} Offset: {item.val}px</Label>
+                <Slider value={[item.val]} onValueChange={([v]) => item.set(v)} min={-150} max={150} step={1} />
               </div>
             ))}
           </CardContent>
         </Card>
         <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Rotation (R)</CardTitle>
+          <CardHeader className="py-3">
+            <CardTitle className="text-sm">Rotation (R)</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            {[['X', rx, setRx], ['Y', ry, setRy], ['Z', rz, setRz]].map(([label, val, set]) => (
-              <div key={label as string} className="space-y-2">
-                <Label className="text-xs">{label} Angle: {val as number}°</Label>
-                <Slider value={[val as number]} onValueChange={([v]) => (set as any)(v)} min={-180} max={180} step={1} />
+          <CardContent className="space-y-3 pb-4">
+            {[
+              { label: 'X', val: rx, set: setRx },
+              { label: 'Y', val: ry, set: setRy },
+              { label: 'Z', val: rz, set: setRz }
+            ].map((item) => (
+              <div key={item.label} className="space-y-1">
+                <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">{item.label} Angle: {item.val}°</Label>
+                <Slider value={[item.val]} onValueChange={([v]) => item.set(v)} min={-180} max={180} step={1} />
               </div>
             ))}
           </CardContent>
         </Card>
         <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Scale (S)</CardTitle>
+          <CardHeader className="py-3">
+            <CardTitle className="text-sm">Scale (S)</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            {[['X', sx, setSx], ['Y', sy, setSy], ['Z', sz, setSz]].map(([label, val, set]) => (
-              <div key={label as string} className="space-y-2">
-                <Label className="text-xs">{label} Scale: {(val as number).toFixed(2)}</Label>
-                <Slider value={[val as number]} onValueChange={([v]) => (set as any)(v)} min={0.1} max={3} step={0.1} />
+          <CardContent className="space-y-3 pb-4">
+            {[
+              { label: 'X', val: sx, set: setSx },
+              { label: 'Y', val: sy, set: setSy },
+              { label: 'Z', val: sz, set: setSz }
+            ].map((item) => (
+              <div key={item.label} className="space-y-1">
+                <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">{item.label} Scale: {item.val.toFixed(2)}</Label>
+                <Slider value={[item.val]} onValueChange={([v]) => item.set(v)} min={0.1} max={3} step={0.1} />
               </div>
             ))}
           </CardContent>
         </Card>
-        <Button onClick={reset} variant="outline" className="w-full">
-          <RotateCcw className="w-4 h-4 mr-2" /> Reset All
+        <Button onClick={reset} variant="outline" size="sm" className="w-full">
+          <RotateCcw className="w-3 h-3 mr-2" /> Reset All
         </Button>
       </div>
       <div className="lg:col-span-8">
