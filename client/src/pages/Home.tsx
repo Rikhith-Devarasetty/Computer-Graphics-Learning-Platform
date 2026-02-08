@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import TransformationModule from "@/components/TransformationModule";
+import Transformation3DModule from "@/components/Transformation3DModule";
 import BresenhamModule from "@/components/BresenhamModule";
 import ColorExplorerModule from "@/components/ColorExplorerModule";
-import { Grid3x3, TrendingUp, Palette } from "lucide-react";
+import { Grid3x3, TrendingUp, Palette, Box } from "lucide-react";
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState("transformations");
@@ -23,10 +24,14 @@ export default function Home() {
 
       <main className="container mx-auto px-6 py-8">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-3 mb-8" data-testid="tabs-navigation">
+          <TabsList className="grid w-full grid-cols-4 mb-8" data-testid="tabs-navigation">
             <TabsTrigger value="transformations" className="gap-2" data-testid="tab-transformations">
               <Grid3x3 className="w-4 h-4" />
               <span>2D Transformations</span>
+            </TabsTrigger>
+            <TabsTrigger value="transformations3d" className="gap-2" data-testid="tab-transformations3d">
+              <Box className="w-4 h-4" />
+              <span>3D Transformations</span>
             </TabsTrigger>
             <TabsTrigger value="bresenham" className="gap-2" data-testid="tab-bresenham">
               <TrendingUp className="w-4 h-4" />
@@ -40,6 +45,10 @@ export default function Home() {
 
           <TabsContent value="transformations" className="mt-0">
             <TransformationModule />
+          </TabsContent>
+
+          <TabsContent value="transformations3d" className="mt-0">
+            <Transformation3DModule />
           </TabsContent>
 
           <TabsContent value="bresenham" className="mt-0">
