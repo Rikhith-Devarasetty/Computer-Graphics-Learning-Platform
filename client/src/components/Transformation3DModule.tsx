@@ -81,20 +81,42 @@ export default function Transformation3DModule() {
       ];
     };
 
-    ctx.strokeStyle = '#333';
+    // Draw grid lines (XY plane)
+    ctx.strokeStyle = 'hsl(var(--muted-foreground) / 0.1)';
     ctx.lineWidth = 0.5;
-    ctx.setLineDash([2, 2]);
-    for (let i = -150; i <= 150; i += 50) {
-      if (i === 0) continue;
-      // Grid on XY plane at Z=0
-      const [x1, y1] = project(i, -150, 0);
-      const [x2, y2] = project(i, 150, 0);
+    for (let i = -200; i <= 200; i += 20) {
+      // Vertical lines
+      const [x1, y1] = project(i, -200, 0);
+      const [x2, y2] = project(i, 200, 0);
       ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
-      const [x3, y3] = project(-150, i, 0);
-      const [x4, y4] = project(150, i, 0);
+      
+      // Horizontal lines
+      const [x3, y3] = project(-200, i, 0);
+      const [x4, y4] = project(200, i, 0);
       ctx.beginPath(); ctx.moveTo(x3, y3); ctx.lineTo(x4, y4); ctx.stroke();
     }
-    ctx.setLineDash([]);
+
+    // Draw main axes through origin
+    const drawFullAxis = (start: [number, number, number], end: [number, number, number], color: string, label: string) => {
+      const [p1x, p1y] = project(...start);
+      const [p2x, p2y] = project(...end);
+      
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(p1x, p1y);
+      ctx.lineTo(p2x, p2y);
+      ctx.stroke();
+
+      // Add label
+      ctx.fillStyle = color;
+      ctx.font = '10px Inter';
+      ctx.fillText(label, p2x + 5, p2y + 5);
+    };
+
+    drawFullAxis([-200, 0, 0], [200, 0, 0], '#ef4444', 'X'); // X
+    drawFullAxis([0, -200, 0], [0, 200, 0], '#22c55e', 'Y'); // Y
+    drawFullAxis([0, 0, -200], [0, 0, 200], '#3b82f6', 'Z'); // Z
 
     ctx.strokeStyle = 'hsl(var(--primary))';
     ctx.lineWidth = 2;
@@ -108,21 +130,7 @@ export default function Transformation3DModule() {
     });
 
     // Draw axes
-    const drawAxis = (end: [number, number, number], color: string) => {
-      const [ox, oy] = project(0, 0, 0);
-      const [ex, ey] = project(...end);
-      ctx.strokeStyle = color;
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(ox, oy);
-      ctx.lineTo(ex, ey);
-      ctx.stroke();
-    };
-
-    drawAxis([150, 0, 0], '#ef4444'); // X
-    drawAxis([0, 150, 0], '#22c55e'); // Y
-    drawAxis([0, 0, 150], '#3b82f6'); // Z
-
+    // Removed old axis drawing logic
   }, [tx, ty, tz, rx, ry, rz, sx, sy, sz]);
 
   return (
