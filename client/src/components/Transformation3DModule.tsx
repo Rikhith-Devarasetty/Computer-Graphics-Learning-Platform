@@ -81,25 +81,35 @@ export default function Transformation3DModule() {
       ];
     };
 
-    // Draw grid lines (XY plane)
+    // Draw grid lines (XY plane) - STATIC (NOT TRANSFORMED)
     ctx.strokeStyle = 'hsl(var(--muted-foreground) / 0.1)';
     ctx.lineWidth = 0.5;
+    
+    // Project function that ignores TRS for the static grid
+    const projectStatic = (x: number, y: number, z: number) => {
+      const perspective = 400 / (400 + z);
+      return [
+        width / 2 + x * perspective,
+        height / 2 - y * perspective
+      ];
+    };
+
     for (let i = -200; i <= 200; i += 20) {
       // Vertical lines
-      const [x1, y1] = project(i, -200, 0);
-      const [x2, y2] = project(i, 200, 0);
+      const [x1, y1] = projectStatic(i, -200, 0);
+      const [x2, y2] = projectStatic(i, 200, 0);
       ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
       
       // Horizontal lines
-      const [x3, y3] = project(-200, i, 0);
-      const [x4, y4] = project(200, i, 0);
+      const [x3, y3] = projectStatic(-200, i, 0);
+      const [x4, y4] = projectStatic(200, i, 0);
       ctx.beginPath(); ctx.moveTo(x3, y3); ctx.lineTo(x4, y4); ctx.stroke();
     }
 
-    // Draw main axes through origin
+    // Draw main axes through origin - STATIC
     const drawFullAxis = (start: [number, number, number], end: [number, number, number], color: string, label: string) => {
-      const [p1x, p1y] = project(...start);
-      const [p2x, p2y] = project(...end);
+      const [p1x, p1y] = projectStatic(...start);
+      const [p2x, p2y] = projectStatic(...end);
       
       ctx.strokeStyle = color;
       ctx.lineWidth = 1.5;
@@ -135,63 +145,63 @@ export default function Transformation3DModule() {
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-      <div className="lg:col-span-4 space-y-4">
+      <div className="lg:col-span-3 space-y-3">
         <Card>
-          <CardHeader className="py-3">
-            <CardTitle className="text-sm">Translation (T)</CardTitle>
+          <CardHeader className="py-2 px-3">
+            <CardTitle className="text-xs font-semibold">Translation (T)</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3 pb-4">
+          <CardContent className="space-y-2 px-3 pb-3">
             {[
               { label: 'X', val: tx, set: setTx },
               { label: 'Y', val: ty, set: setTy },
               { label: 'Z', val: tz, set: setTz }
             ].map((item) => (
-              <div key={item.label} className="space-y-1">
-                <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">{item.label} Offset: {item.val}px</Label>
-                <Slider value={[item.val]} onValueChange={([v]) => item.set(v)} min={-150} max={150} step={1} />
+              <div key={item.label} className="space-y-0.5">
+                <Label className="text-[9px] uppercase tracking-wider text-muted-foreground">{item.label}: {item.val}px</Label>
+                <Slider value={[item.val]} onValueChange={([v]) => item.set(v)} min={-150} max={150} step={1} className="py-1" />
               </div>
             ))}
           </CardContent>
         </Card>
         <Card>
-          <CardHeader className="py-3">
-            <CardTitle className="text-sm">Rotation (R)</CardTitle>
+          <CardHeader className="py-2 px-3">
+            <CardTitle className="text-xs font-semibold">Rotation (R)</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3 pb-4">
+          <CardContent className="space-y-2 px-3 pb-3">
             {[
               { label: 'X', val: rx, set: setRx },
               { label: 'Y', val: ry, set: setRy },
               { label: 'Z', val: rz, set: setRz }
             ].map((item) => (
-              <div key={item.label} className="space-y-1">
-                <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">{item.label} Angle: {item.val}°</Label>
-                <Slider value={[item.val]} onValueChange={([v]) => item.set(v)} min={-180} max={180} step={1} />
+              <div key={item.label} className="space-y-0.5">
+                <Label className="text-[9px] uppercase tracking-wider text-muted-foreground">{item.label}: {item.val}°</Label>
+                <Slider value={[item.val]} onValueChange={([v]) => item.set(v)} min={-180} max={180} step={1} className="py-1" />
               </div>
             ))}
           </CardContent>
         </Card>
         <Card>
-          <CardHeader className="py-3">
-            <CardTitle className="text-sm">Scale (S)</CardTitle>
+          <CardHeader className="py-2 px-3">
+            <CardTitle className="text-xs font-semibold">Scale (S)</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3 pb-4">
+          <CardContent className="space-y-2 px-3 pb-3">
             {[
               { label: 'X', val: sx, set: setSx },
               { label: 'Y', val: sy, set: setSy },
               { label: 'Z', val: sz, set: setSz }
             ].map((item) => (
-              <div key={item.label} className="space-y-1">
-                <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">{item.label} Scale: {item.val.toFixed(2)}</Label>
-                <Slider value={[item.val]} onValueChange={([v]) => item.set(v)} min={0.1} max={3} step={0.1} />
+              <div key={item.label} className="space-y-0.5">
+                <Label className="text-[9px] uppercase tracking-wider text-muted-foreground">{item.label}: {item.val.toFixed(2)}</Label>
+                <Slider value={[item.val]} onValueChange={([v]) => item.set(v)} min={0.1} max={3} step={0.1} className="py-1" />
               </div>
             ))}
           </CardContent>
         </Card>
-        <Button onClick={reset} variant="outline" size="sm" className="w-full">
+        <Button onClick={reset} variant="outline" size="sm" className="w-full h-8 text-xs">
           <RotateCcw className="w-3 h-3 mr-2" /> Reset All
         </Button>
       </div>
-      <div className="lg:col-span-8">
+      <div className="lg:col-span-9">
         <Card className="h-full">
           <CardHeader>
             <CardTitle className="text-lg">3D Viewport</CardTitle>
