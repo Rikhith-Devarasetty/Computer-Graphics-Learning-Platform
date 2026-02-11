@@ -52,8 +52,16 @@ export default function Transformation3DModule() {
 
   const updateCustomMatrix = (row: number, col: number, value: string) => {
     const numValue = parseFloat(value) || 0;
+    // Limit translation (last column) and scaling (diagonal) values to avoid overflow
+    let clampedValue = numValue;
+    if (col === 3) {
+      clampedValue = Math.max(-200, Math.min(200, numValue));
+    } else {
+      clampedValue = Math.max(-5, Math.min(5, numValue));
+    }
+
     const newMatrix = customMatrix.map((r, i) =>
-      i === row ? r.map((c, j) => j === col ? numValue : c) : [...r]
+      i === row ? r.map((c, j) => j === col ? clampedValue : c) : [...r]
     );
     setCustomMatrix(newMatrix);
   };
