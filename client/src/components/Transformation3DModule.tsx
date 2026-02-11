@@ -57,7 +57,7 @@ export default function Transformation3DModule() {
     if (col === 3) {
       clampedValue = Math.max(-200, Math.min(200, numValue));
     } else {
-      clampedValue = Math.max(-5, Math.min(5, numValue));
+      clampedValue = Math.max(-3, Math.min(3, numValue));
     }
 
     const newMatrix = customMatrix.map((r, i) =>
@@ -288,6 +288,7 @@ export default function Transformation3DModule() {
               <TabsContent value="custom" className="space-y-4 mt-0">
                 <div className="space-y-2">
                   <Label className="text-[10px] font-bold text-muted-foreground uppercase">Custom 4×4 Matrix</Label>
+                  <p className="text-[9px] text-muted-foreground">Values limited to ±3 (Translation limited to ±200)</p>
                   <div className="grid gap-1.5">
                     {customMatrix.map((row, i) => (
                       <div key={i} className="grid grid-cols-4 gap-1.5">
