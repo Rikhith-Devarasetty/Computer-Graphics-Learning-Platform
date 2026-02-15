@@ -154,11 +154,17 @@ export default function TransformationModule() {
     ctx.stroke();
 
     // Draw main axes
-    ctx.strokeStyle = '#888';
-    ctx.lineWidth = 1;
+    ctx.lineWidth = 2;
+    // X-axis (Red)
+    ctx.strokeStyle = '#ef4444';
     ctx.beginPath();
     ctx.moveTo(-canvas.width / 2, 0);
     ctx.lineTo(canvas.width / 2, 0);
+    ctx.stroke();
+
+    // Y-axis (Green)
+    ctx.strokeStyle = '#22c55e';
+    ctx.beginPath();
     ctx.moveTo(0, -canvas.height / 2);
     ctx.lineTo(0, canvas.height / 2);
     ctx.stroke();
