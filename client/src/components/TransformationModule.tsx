@@ -137,6 +137,23 @@ export default function TransformationModule() {
     ctx.save();
     ctx.translate(canvas.width / 2, canvas.height / 2);
 
+    // Draw static grid lines
+    ctx.strokeStyle = 'hsl(var(--muted-foreground) / 0.1)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    // Vertical grid lines
+    for (let x = -canvas.width / 2; x <= canvas.width / 2; x += 20) {
+      ctx.moveTo(x, -canvas.height / 2);
+      ctx.lineTo(x, canvas.height / 2);
+    }
+    // Horizontal grid lines
+    for (let y = -canvas.height / 2; y <= canvas.height / 2; y += 20) {
+      ctx.moveTo(-canvas.width / 2, y);
+      ctx.lineTo(canvas.width / 2, y);
+    }
+    ctx.stroke();
+
+    // Draw main axes
     ctx.strokeStyle = '#888';
     ctx.lineWidth = 1;
     ctx.beginPath();
