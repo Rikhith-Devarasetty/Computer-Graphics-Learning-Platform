@@ -138,7 +138,7 @@ export default function TransformationModule() {
     ctx.translate(canvas.width / 2, canvas.height / 2);
 
     // Draw static grid lines
-    ctx.strokeStyle = 'hsl(var(--muted-foreground) / 0.1)';
+    ctx.strokeStyle = 'hsl(var(--muted-foreground) / 0.05)';
     ctx.lineWidth = 1;
     ctx.beginPath();
     // Vertical grid lines

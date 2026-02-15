@@ -38,20 +38,23 @@ export default function BresenhamModule() {
     let err = dx - dy;
 
     while (true) {
-      const decision = err > 0 ? (sx > 0 ? "Move right" : "Move left") : (sy > 0 ? "Move down" : "Move up");
-      newSteps.push({ x, y, error: err, decision });
+      newSteps.push({ x, y, error: err, decision: "" });
 
       if (x === x1 && y === y1) break;
 
       const e2 = 2 * err;
+      let decision = "";
       if (e2 > -dy) {
         err -= dy;
         x += sx;
+        decision += sx > 0 ? "Right " : "Left ";
       }
       if (e2 < dx) {
         err += dx;
         y += sy;
+        decision += sy > 0 ? "Down " : "Up ";
       }
+      newSteps[newSteps.length - 1].decision = decision.trim();
     }
 
     setSteps(newSteps);
