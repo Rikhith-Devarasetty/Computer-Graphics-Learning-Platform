@@ -18,6 +18,7 @@ export default function TransformationModule() {
   const [matrixOrder, setMatrixOrder] = useState("TRS");
   const [inputMode, setInputMode] = useState<"sliders" | "custom">("sliders");
   const [axisView, setAxisView] = useState<"both" | "x" | "y">("both");
+  const [previousStates, setPreviousStates] = useState<{translateX: number, translateY: number, rotation: number, scaleX: number, scaleY: number}[]>([]);
 
   const [customMatrix, setCustomMatrix] = useState<number[][]>([
     [1, 0, 0],
@@ -28,6 +29,24 @@ export default function TransformationModule() {
   const originalVertices = [
     [-50, -50], [50, -50], [50, 50], [-50, 50]
   ];
+
+  useEffect(() => {
+    // Only track steps in slider mode
+    if (inputMode === "sliders") {
+      setPreviousStates(prev => {
+        const last = prev[prev.length - 1];
+        if (last && 
+            last.translateX === translateX && 
+            last.translateY === translateY && 
+            last.rotation === rotation && 
+            last.scaleX === scaleX && 
+            last.scaleY === scaleY) {
+          return prev;
+        }
+        return [...prev, { translateX, translateY, rotation, scaleX, scaleY }].slice(-5); // Keep last 5 steps
+      });
+    }
+  }, [translateX, translateY, rotation, scaleX, scaleY, inputMode]);
 
   const clampValue = (value: number, min: number, max: number): number => {
     return Math.max(min, Math.min(max, value));
@@ -48,6 +67,7 @@ export default function TransformationModule() {
     setRotation(0);
     setScaleX(1);
     setScaleY(1);
+    setPreviousStates([]);
     setCustomMatrix([
       [1, 0, 0],
       [0, 1, 0],
@@ -57,12 +77,13 @@ export default function TransformationModule() {
 
   const createTranslationMatrix = (tx: number, ty: number): number[][] => [
     [1, 0, tx],
-    [0, 1, ty],
+    [0, 1, -ty], // Flip Y for internal matrix math to match "Up" convention
     [0, 0, 1]
   ];
 
   const createRotationMatrix = (angle: number): number[][] => {
-    const rad = (angle * Math.PI) / 180;
+    // angle is negated to make positive rotation counter-clockwise when Y is flipped
+    const rad = (-angle * Math.PI) / 180;
     const cos = Math.cos(rad);
     const sin = Math.sin(rad);
     return [
@@ -101,14 +122,14 @@ export default function TransformationModule() {
     return [newX, newY];
   };
 
-  const getCombinedMatrix = (): number[][] => {
+  const getCombinedMatrix = (tx = translateX, ty = translateY, rot = rotation, sx = scaleX, sy = scaleY): number[][] => {
     if (inputMode === "custom") {
       return customMatrix;
     }
 
-    const T = createTranslationMatrix(translateX, translateY);
-    const R = createRotationMatrix(rotation);
-    const S = createScaleMatrix(scaleX, scaleY);
+    const T = createTranslationMatrix(tx, ty);
+    const R = createRotationMatrix(rot);
+    const S = createScaleMatrix(sx, sy);
 
     if (matrixOrder === "TRS") {
       return multiplyMatrices(multiplyMatrices(T, R), S);
@@ -136,6 +157,7 @@ export default function TransformationModule() {
 
     ctx.save();
     ctx.translate(canvas.width / 2, canvas.height / 2);
+    ctx.scale(1, -1); // Flip Y globally for the "Up" convention
 
     // Draw static grid lines
     ctx.strokeStyle = 'hsl(var(--muted-foreground) / 0.05)';
@@ -181,6 +203,24 @@ export default function TransformationModule() {
     ctx.stroke();
     ctx.setLineDash([]);
 
+    // Draw previous step if available
+    if (previousStates.length > 1) {
+      const prev = previousStates[previousStates.length - 2];
+      const prevMatrix = getCombinedMatrix(prev.translateX, prev.translateY, prev.rotation, prev.scaleX, prev.scaleY);
+      const prevVertices = originalVertices.map(v => transformPoint(v, prevMatrix));
+      
+      ctx.strokeStyle = 'hsl(var(--primary) / 0.3)';
+      ctx.setLineDash([2, 2]);
+      ctx.beginPath();
+      ctx.moveTo(prevVertices[0][0], prevVertices[0][1]);
+      for (let i = 1; i < prevVertices.length; i++) {
+        ctx.lineTo(prevVertices[i][0], prevVertices[i][1]);
+      }
+      ctx.closePath();
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
     const combinedMatrix = getCombinedMatrix();
 
     // Draw transformed X and Y axes
@@ -224,7 +264,7 @@ export default function TransformationModule() {
     ctx.stroke();
 
     ctx.restore();
-  }, [translateX, translateY, rotation, scaleX, scaleY, matrixOrder, customMatrix, inputMode, axisView]);
+  }, [translateX, translateY, rotation, scaleX, scaleY, matrixOrder, customMatrix, inputMode, axisView, previousStates]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
