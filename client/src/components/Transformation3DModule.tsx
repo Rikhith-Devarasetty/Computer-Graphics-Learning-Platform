@@ -216,6 +216,28 @@ export default function Transformation3DModule() {
       ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
     });
 
+    // Draw local axes attached to the object
+    const drawLocalAxis = (dir: [number, number, number], color: string, label: string) => {
+      const [ox, oy] = project(0, 0, 0);
+      const [ex, ey] = project(...dir);
+      
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2;
+      ctx.setLineDash([2, 2]); // Use dashed lines for local axes to distinguish from global
+      ctx.beginPath();
+      ctx.moveTo(ox, oy);
+      ctx.lineTo(ex, ey);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      ctx.fillStyle = color;
+      ctx.font = 'bold 10px Inter';
+      ctx.fillText(label, ex + 5, ey + 5);
+    };
+
+    drawLocalAxis([80, 0, 0], '#ef4444', 'X_local');
+    drawLocalAxis([0, 80, 0], '#22c55e', 'Y_local');
+
   }, [tx, ty, tz, rx, ry, rz, sx, sy, sz, customMatrix, inputMode]);
 
   const T = createTranslationMatrix(tx, ty, tz);
@@ -326,10 +348,12 @@ export default function Transformation3DModule() {
           </CardHeader>
           <CardContent>
             <canvas ref={canvasRef} width={600} height={500} className="w-full border rounded-md bg-background" />
-            <div className="mt-4 flex gap-4 text-[10px] text-muted-foreground justify-center uppercase tracking-widest font-bold">
-              <div className="flex items-center gap-1"><div className="w-3 h-0.5 bg-[#ef4444]" /> X</div>
-              <div className="flex items-center gap-1"><div className="w-3 h-0.5 bg-[#22c55e]" /> Y</div>
-              <div className="flex items-center gap-1"><div className="w-3 h-0.5 bg-[#3b82f6]" /> Z</div>
+            <div className="mt-4 flex flex-wrap gap-4 text-[10px] text-muted-foreground justify-center uppercase tracking-widest font-bold">
+              <div className="flex items-center gap-1"><div className="w-3 h-0.5 bg-[#ef4444]" /> X_global</div>
+              <div className="flex items-center gap-1"><div className="w-3 h-0.5 bg-[#22c55e]" /> Y_global</div>
+              <div className="flex items-center gap-1"><div className="w-3 h-0.5 bg-[#3b82f6]" /> Z_global</div>
+              <div className="flex items-center gap-1"><div className="w-3 h-0.5 border-b border-dashed border-[#ef4444]" /> X_local</div>
+              <div className="flex items-center gap-1"><div className="w-3 h-0.5 border-b border-dashed border-[#22c55e]" /> Y_local</div>
             </div>
           </CardContent>
         </Card>
