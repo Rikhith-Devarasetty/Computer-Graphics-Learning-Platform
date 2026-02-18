@@ -27,6 +27,8 @@ export default function Transformation3DModule() {
     [0, 0, 0, 1]
   ]);
 
+  const [previousStates, setPreviousStates] = useState<{tx: number, ty: number, tz: number, rx: number, ry: number, rz: number, sx: number, sy: number, sz: number}[]>([]);
+
   const cubeVertices = [
     [-50, -50, -50], [50, -50, -50], [50, 50, -50], [-50, 50, -50],
     [-50, -50, 50], [50, -50, 50], [50, 50, 50], [-50, 50, 50]
@@ -38,10 +40,26 @@ export default function Transformation3DModule() {
     [0, 4], [1, 5], [2, 6], [3, 7]
   ];
 
+  useEffect(() => {
+    if (inputMode === "sliders") {
+      setPreviousStates(prev => {
+        const last = prev[prev.length - 1];
+        if (last && 
+            last.tx === tx && last.ty === ty && last.tz === tz &&
+            last.rx === rx && last.ry === ry && last.rz === rz &&
+            last.sx === sx && last.sy === sy && last.sz === sz) {
+          return prev;
+        }
+        return [...prev, { tx, ty, tz, rx, ry, rz, sx, sy, sz }].slice(-5);
+      });
+    }
+  }, [tx, ty, tz, rx, ry, rz, sx, sy, sz, inputMode]);
+
   const reset = () => {
     setTx(0); setTy(0); setTz(0);
     setRx(0); setRy(0); setRz(0);
     setSx(1); setSy(1); setSz(1);
+    setPreviousStates([]);
     setCustomMatrix([
       [1, 0, 0, 0],
       [0, 1, 0, 0],
@@ -134,14 +152,14 @@ export default function Transformation3DModule() {
     ).join('\n');
   };
 
-  const getCombinedMatrix = (): number[][] => {
-    if (inputMode === "custom") return customMatrix;
+  const getCombinedMatrix = (itx = tx, ity = ty, itz = tz, irx = rx, iry = ry, irz = rz, isx = sx, isy = sy, isz = sz): number[][] => {
+    if (inputMode === "custom" && itx === tx) return customMatrix;
 
-    const T = createTranslationMatrix(tx, ty, tz);
-    const RX = createRotationXMatrix(rx);
-    const RY = createRotationYMatrix(ry);
-    const RZ = createRotationZMatrix(rz);
-    const S = createScaleMatrix(sx, sy, sz);
+    const T = createTranslationMatrix(itx, ity, itz);
+    const RX = createRotationXMatrix(irx);
+    const RY = createRotationYMatrix(iry);
+    const RZ = createRotationZMatrix(irz);
+    const S = createScaleMatrix(isx, isy, isz);
 
     // Apply S then R (XYZ) then T
     const R = multiplyMatrices(multiplyMatrices(RX, RY), RZ);
@@ -168,11 +186,8 @@ export default function Transformation3DModule() {
       return [nx, ny, nz];
     };
 
-    const project = (x: number, y: number, z: number, useTransform = true) => {
-      let nx = x, ny = y, nz = z;
-      if (useTransform) {
-        [nx, ny, nz] = transformPoint([x, y, z], combinedMatrix);
-      }
+    const project = (x: number, y: number, z: number, matrix = combinedMatrix) => {
+      const [nx, ny, nz] = transformPoint([x, y, z], matrix);
       const perspective = 400 / (400 + nz);
       return [
         width / 2 + nx * perspective,
@@ -180,25 +195,49 @@ export default function Transformation3DModule() {
       ];
     };
 
+    const projectStatic = (x: number, y: number, z: number) => {
+      const perspective = 400 / (400 + z);
+      return [
+        width / 2 + x * perspective,
+        height / 2 - y * perspective
+      ];
+    };
+
     // Draw grid lines (XY plane) - STATIC (NOT TRANSFORMED)
     ctx.strokeStyle = 'hsl(var(--muted-foreground) / 0.1)';
     ctx.lineWidth = 0.5;
     for (let i = -200; i <= 200; i += 20) {
-      const [x1, y1] = project(i, -200, 0, false);
-      const [x2, y2] = project(i, 200, 0, false);
+      const [x1, y1] = projectStatic(i, -200, 0);
+      const [x2, y2] = projectStatic(i, 200, 0);
       ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
-      const [x3, y3] = project(-200, i, 0, false);
-      const [x4, y4] = project(200, i, 0, false);
+      const [x3, y3] = projectStatic(-200, i, 0);
+      const [x4, y4] = projectStatic(200, i, 0);
       ctx.beginPath(); ctx.moveTo(x3, y3); ctx.lineTo(x4, y4); ctx.stroke();
     }
 
     // Draw main axes through origin - STATIC
     const drawFullAxis = (start: [number, number, number], end: [number, number, number], color: string, label: string) => {
-      const [p1x, p1y] = project(...start, false);
-      const [p2x, p2y] = project(...end, false);
+      const [p1x, p1y] = projectStatic(...start);
+      const [p2x, p2y] = projectStatic(...end);
       ctx.strokeStyle = color;
       ctx.lineWidth = 1.5;
       ctx.beginPath(); ctx.moveTo(p1x, p1y); ctx.lineTo(p2x, p2y); ctx.stroke();
+      
+      // Draw arrowhead
+      const angle = Math.atan2(p2y - p1y, p2x - p1x);
+      const headLen = 8;
+      ctx.save();
+      ctx.translate(p2x, p2y);
+      ctx.rotate(angle);
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(-headLen, headLen/2);
+      ctx.lineTo(-headLen, -headLen/2);
+      ctx.closePath();
+      ctx.fillStyle = color;
+      ctx.fill();
+      ctx.restore();
+
       ctx.fillStyle = color;
       ctx.font = '10px Inter';
       ctx.fillText(label, p2x + 5, p2y + 5);
@@ -207,6 +246,21 @@ export default function Transformation3DModule() {
     drawFullAxis([-200, 0, 0], [200, 0, 0], '#ef4444', 'X'); // X
     drawFullAxis([0, -200, 0], [0, 200, 0], '#22c55e', 'Y'); // Y
     drawFullAxis([0, 0, -200], [0, 0, 200], '#3b82f6', 'Z'); // Z
+
+    // Draw previous step if available
+    if (previousStates.length > 1) {
+      const prev = previousStates[previousStates.length - 2];
+      const prevMatrix = getCombinedMatrix(prev.tx, prev.ty, prev.tz, prev.rx, prev.ry, prev.rz, prev.sx, prev.sy, prev.sz);
+      
+      ctx.strokeStyle = 'hsl(var(--primary) / 0.3)';
+      ctx.setLineDash([2, 2]);
+      edges.forEach(([start, end]) => {
+        const [x1, y1] = project(...(cubeVertices[start] as [number, number, number]), prevMatrix);
+        const [x2, y2] = project(...(cubeVertices[end] as [number, number, number]), prevMatrix);
+        ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+      });
+      ctx.setLineDash([]);
+    }
 
     ctx.strokeStyle = 'hsl(var(--primary))';
     ctx.lineWidth = 2;
@@ -223,11 +277,8 @@ export default function Transformation3DModule() {
       
       ctx.strokeStyle = color;
       ctx.lineWidth = 2;
-      ctx.setLineDash([2, 2]); // Use dashed lines for local axes to distinguish from global
-      ctx.beginPath();
-      ctx.moveTo(ox, oy);
-      ctx.lineTo(ex, ey);
-      ctx.stroke();
+      ctx.setLineDash([2, 2]);
+      ctx.beginPath(); ctx.moveTo(ox, oy); ctx.lineTo(ex, ey); ctx.stroke();
       ctx.setLineDash([]);
 
       ctx.fillStyle = color;
@@ -238,7 +289,7 @@ export default function Transformation3DModule() {
     drawLocalAxis([80, 0, 0], '#ef4444', 'X_local');
     drawLocalAxis([0, 80, 0], '#22c55e', 'Y_local');
 
-  }, [tx, ty, tz, rx, ry, rz, sx, sy, sz, customMatrix, inputMode]);
+  }, [tx, ty, tz, rx, ry, rz, sx, sy, sz, customMatrix, inputMode, previousStates]);
 
   const T = createTranslationMatrix(tx, ty, tz);
   const R = multiplyMatrices(multiplyMatrices(createRotationXMatrix(rx), createRotationYMatrix(ry)), createRotationZMatrix(rz));

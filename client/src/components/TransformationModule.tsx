@@ -175,6 +175,21 @@ export default function TransformationModule() {
     }
     ctx.stroke();
 
+    const drawArrowhead = (x: number, y: number, angle: number, color: string) => {
+      const headLength = 10;
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(angle);
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(-headLength, headLength / 2);
+      ctx.lineTo(-headLength, -headLength / 2);
+      ctx.closePath();
+      ctx.fillStyle = color;
+      ctx.fill();
+      ctx.restore();
+    };
+
     // Draw main axes
     ctx.lineWidth = 2;
     // X-axis (Red)
@@ -183,6 +198,7 @@ export default function TransformationModule() {
     ctx.moveTo(-canvas.width / 2, 0);
     ctx.lineTo(canvas.width / 2, 0);
     ctx.stroke();
+    drawArrowhead(canvas.width / 2, 0, 0, '#ef4444');
 
     // Y-axis (Green)
     ctx.strokeStyle = '#22c55e';
@@ -190,6 +206,7 @@ export default function TransformationModule() {
     ctx.moveTo(0, -canvas.height / 2);
     ctx.lineTo(0, canvas.height / 2);
     ctx.stroke();
+    drawArrowhead(0, canvas.height / 2, Math.PI / 2, '#22c55e');
 
     ctx.strokeStyle = 'hsl(var(--muted-foreground))';
     ctx.lineWidth = 2;
