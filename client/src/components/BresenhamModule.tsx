@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Play, Pause, SkipForward, RotateCcw, Shuffle } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 
 interface Step {
   x: number;
@@ -23,6 +24,7 @@ export default function BresenhamModule() {
   const [currentStep, setCurrentStep] = useState(-1);
   const [isPlaying, setIsPlaying] = useState(false);
   const [speed, setSpeed] = useState(500);
+  const [connectDiagonals, setConnectDiagonals] = useState(false);
 
   const gridSize = 30;
   const cellSize = 20;
@@ -44,17 +46,39 @@ export default function BresenhamModule() {
 
       const e2 = 2 * err;
       let decision = "";
-      if (e2 > -dy) {
+      let oldX = x;
+      let oldY = y;
+      let oldErr = err;
+
+      if (e2 >= -dy) {
         err -= dy;
         x += sx;
         decision += sx > 0 ? "Right " : "Left ";
       }
-      if (e2 < dx) {
+      if (e2 <= dx) {
         err += dx;
         y += sy;
         decision += sy > 0 ? "Down " : "Up ";
       }
-      newSteps[newSteps.length - 1].decision = decision.trim();
+
+      if (connectDiagonals && x !== oldX && y !== oldY) {
+        newSteps[newSteps.length - 1].decision = decision.trim() + " (Diag)";
+
+        let bridgeX, bridgeY, bridgeErr;
+        if (Math.abs(oldErr - dy) < Math.abs(oldErr + dx)) {
+          bridgeX = x;
+          bridgeY = oldY;
+          bridgeErr = oldErr - dy;
+        } else {
+          bridgeX = oldX;
+          bridgeY = y;
+          bridgeErr = oldErr + dx;
+        }
+
+        newSteps.push({ x: bridgeX, y: bridgeY, error: bridgeErr, decision: "Bridge gap" });
+      } else {
+        newSteps[newSteps.length - 1].decision = decision.trim();
+      }
     }
 
     setSteps(newSteps);
@@ -64,7 +88,7 @@ export default function BresenhamModule() {
 
   useEffect(() => {
     calculateBresenham();
-  }, [x0, y0, x1, y1]);
+  }, [x0, y0, x1, y1, connectDiagonals]);
 
   useEffect(() => {
     if (!isPlaying) return;
@@ -217,20 +241,33 @@ export default function BresenhamModule() {
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label className="text-sm font-medium">Animation Speed</Label>
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <span>Slow</span>
-                <Slider
-                  value={[1000 - speed]}
-                  onValueChange={([val]) => setSpeed(1000 - val)}
-                  min={100}
-                  max={900}
-                  step={100}
-                  className="flex-1"
-                  data-testid="slider-speed"
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <Label className="text-sm font-medium cursor-pointer" htmlFor="connect-diagonals">
+                  Fill Diagonal Gaps (4-Connected)
+                </Label>
+                <Switch
+                  id="connect-diagonals"
+                  checked={connectDiagonals}
+                  onCheckedChange={setConnectDiagonals}
                 />
-                <span>Fast</span>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Animation Speed</Label>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <span>Slow</span>
+                  <Slider
+                    value={[1000 - speed]}
+                    onValueChange={([val]) => setSpeed(1000 - val)}
+                    min={100}
+                    max={900}
+                    step={100}
+                    className="flex-1"
+                    data-testid="slider-speed"
+                  />
+                  <span>Fast</span>
+                </div>
               </div>
             </div>
 
@@ -263,7 +300,7 @@ export default function BresenhamModule() {
           <CardHeader>
             <CardTitle className="text-lg">Grid Visualization</CardTitle>
             <CardDescription>
-              Step {currentStep + 1} of {steps.length} 
+              Step {currentStep + 1} of {steps.length}
               {currentStep >= 0 && ` - Current pixel highlighted in red`}
             </CardDescription>
           </CardHeader>
@@ -294,13 +331,12 @@ export default function BresenhamModule() {
                   {steps.map((step, index) => (
                     <div
                       key={index}
-                      className={`p-3 rounded-md border text-xs font-mono ${
-                        index === currentStep
-                          ? 'bg-primary/10 border-primary'
-                          : index < currentStep
+                      className={`p-3 rounded-md border text-xs font-mono ${index === currentStep
+                        ? 'bg-primary/10 border-primary'
+                        : index < currentStep
                           ? 'bg-muted/50'
                           : 'bg-background'
-                      }`}
+                        }`}
                       data-testid={`step-${index}`}
                     >
                       <div className="font-semibold mb-1">Step {index + 1}</div>
@@ -330,7 +366,8 @@ export default function BresenhamModule() {
             <p>
               The algorithm uses an error term to decide whether to move diagonally or straight at each step,
               ensuring the line stays as close as possible to the ideal mathematical line while only using
-              addition, subtraction, and bit shifting operations.
+              addition, subtraction, and bit shifting operations. By default, Bresenham produces an 8-connected
+              line (pixels may touch only at corners). Enabling "Fill Diagonal Gaps" produces a 4-connected line.
             </p>
           </CardContent>
         </Card>

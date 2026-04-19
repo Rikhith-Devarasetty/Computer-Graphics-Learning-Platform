@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <!-- Top Face (Blue) -->
+  <polygon points="50,15 85,35 50,55 15,35" fill="#3b82f6" />
+  <!-- Left Face (Red) -->
+  <polygon points="15,35 50,55 50,90 15,70" fill="#ef4444" />
+  <!-- Right Face (Green) -->
+  <polygon points="85,35 50,55 50,90 85,70" fill="#22c55e" />
+  
+  <!-- Edges for crisp definition -->
+  <polyline points="50,55 50,90" stroke="#ffffff" stroke-width="2" stroke-linecap="round" />
+  <polyline points="50,55 15,35" stroke="#ffffff" stroke-width="2" stroke-linecap="round" />
+  <polyline points="50,55 85,35" stroke="#ffffff" stroke-width="2" stroke-linecap="round" />
+</svg>

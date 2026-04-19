@@ -9,15 +9,91 @@ import { RotateCcw, Box, Edit3, Sliders } from "lucide-react";
 
 export default function Transformation3DModule() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [tx, setTx] = useState(0);
-  const [ty, setTy] = useState(0);
-  const [tz, setTz] = useState(0);
   const [rx, setRx] = useState(0);
   const [ry, setRy] = useState(0);
   const [rz, setRz] = useState(0);
-  const [sx, setSx] = useState(1);
-  const [sy, setSy] = useState(1);
-  const [sz, setSz] = useState(1);
+
+  const [matrixT, setMatrixT] = useState<number[][]>([
+    [1, 0, 0, 0],
+    [0, 1, 0, 0],
+    [0, 0, 1, 0],
+    [0, 0, 0, 1]
+  ]);
+
+  const [matrixS, setMatrixS] = useState<number[][]>([
+    [1, 0, 0, 0],
+    [0, 1, 0, 0],
+    [0, 0, 1, 0],
+    [0, 0, 0, 1]
+  ]);
+
+  const tx = matrixT[0][3];
+  const ty = matrixT[1][3];
+  const tz = matrixT[2][3];
+
+  const sx = matrixS[0][0];
+  const sy = matrixS[1][1];
+  const sz = matrixS[2][2];
+
+  const setTx = (val: number | ((prev: number) => number)) => {
+    setMatrixT(prev => {
+      const current = prev[0][3];
+      const next = typeof val === 'function' ? val(current) : val;
+      const newM = [...prev.map(r => [...r])];
+      newM[0][3] = next;
+      return newM;
+    });
+  };
+
+  const setTy = (val: number | ((prev: number) => number)) => {
+    setMatrixT(prev => {
+      const current = prev[1][3];
+      const next = typeof val === 'function' ? val(current) : val;
+      const newM = [...prev.map(r => [...r])];
+      newM[1][3] = next;
+      return newM;
+    });
+  };
+
+  const setTz = (val: number | ((prev: number) => number)) => {
+    setMatrixT(prev => {
+      const current = prev[2][3];
+      const next = typeof val === 'function' ? val(current) : val;
+      const newM = [...prev.map(r => [...r])];
+      newM[2][3] = next;
+      return newM;
+    });
+  };
+
+  const setSx = (val: number | ((prev: number) => number)) => {
+    setMatrixS(prev => {
+      const current = prev[0][0];
+      const next = typeof val === 'function' ? val(current) : val;
+      const newM = [...prev.map(r => [...r])];
+      newM[0][0] = next;
+      return newM;
+    });
+  };
+
+  const setSy = (val: number | ((prev: number) => number)) => {
+    setMatrixS(prev => {
+      const current = prev[1][1];
+      const next = typeof val === 'function' ? val(current) : val;
+      const newM = [...prev.map(r => [...r])];
+      newM[1][1] = next;
+      return newM;
+    });
+  };
+
+  const setSz = (val: number | ((prev: number) => number)) => {
+    setMatrixS(prev => {
+      const current = prev[2][2];
+      const next = typeof val === 'function' ? val(current) : val;
+      const newM = [...prev.map(r => [...r])];
+      newM[2][2] = next;
+      return newM;
+    });
+  };
   const [inputMode, setInputMode] = useState<"sliders" | "custom">("sliders");
 
   const [customMatrix, setCustomMatrix] = useState<number[][]>([
@@ -26,8 +102,6 @@ export default function Transformation3DModule() {
     [0, 0, 1, 0],
     [0, 0, 0, 1]
   ]);
-
-  const [previousStates, setPreviousStates] = useState<{tx: number, ty: number, tz: number, rx: number, ry: number, rz: number, sx: number, sy: number, sz: number}[]>([]);
 
   const cubeVertices = [
     [-50, -50, -50], [50, -50, -50], [50, 50, -50], [-50, 50, -50],
@@ -40,26 +114,20 @@ export default function Transformation3DModule() {
     [0, 4], [1, 5], [2, 6], [3, 7]
   ];
 
-  useEffect(() => {
-    if (inputMode === "sliders") {
-      setPreviousStates(prev => {
-        const last = prev[prev.length - 1];
-        if (last && 
-            last.tx === tx && last.ty === ty && last.tz === tz &&
-            last.rx === rx && last.ry === ry && last.rz === rz &&
-            last.sx === sx && last.sy === sy && last.sz === sz) {
-          return prev;
-        }
-        return [...prev, { tx, ty, tz, rx, ry, rz, sx, sy, sz }].slice(-5);
-      });
-    }
-  }, [tx, ty, tz, rx, ry, rz, sx, sy, sz, inputMode]);
-
   const reset = () => {
-    setTx(0); setTy(0); setTz(0);
+    setMatrixT([
+      [1, 0, 0, 0],
+      [0, 1, 0, 0],
+      [0, 0, 1, 0],
+      [0, 0, 0, 1]
+    ]);
+    setMatrixS([
+      [1, 0, 0, 0],
+      [0, 1, 0, 0],
+      [0, 0, 1, 0],
+      [0, 0, 0, 1]
+    ]);
     setRx(0); setRy(0); setRz(0);
-    setSx(1); setSy(1); setSz(1);
-    setPreviousStates([]);
     setCustomMatrix([
       [1, 0, 0, 0],
       [0, 1, 0, 0],
@@ -152,14 +220,14 @@ export default function Transformation3DModule() {
     ).join('\n');
   };
 
-  const getCombinedMatrix = (itx = tx, ity = ty, itz = tz, irx = rx, iry = ry, irz = rz, isx = sx, isy = sy, isz = sz): number[][] => {
-    if (inputMode === "custom" && itx === tx) return customMatrix;
+  const getCombinedMatrix = (): number[][] => {
+    if (inputMode === "custom") return customMatrix;
 
-    const T = createTranslationMatrix(itx, ity, itz);
-    const RX = createRotationXMatrix(irx);
-    const RY = createRotationYMatrix(iry);
-    const RZ = createRotationZMatrix(irz);
-    const S = createScaleMatrix(isx, isy, isz);
+    const T = matrixT;
+    const RX = createRotationXMatrix(rx);
+    const RY = createRotationYMatrix(ry);
+    const RZ = createRotationZMatrix(rz);
+    const S = matrixS;
 
     // Apply S then R (XYZ) then T
     const R = multiplyMatrices(multiplyMatrices(RX, RY), RZ);
@@ -222,7 +290,7 @@ export default function Transformation3DModule() {
       ctx.strokeStyle = color;
       ctx.lineWidth = 1.5;
       ctx.beginPath(); ctx.moveTo(p1x, p1y); ctx.lineTo(p2x, p2y); ctx.stroke();
-      
+
       // Draw arrowhead
       const angle = Math.atan2(p2y - p1y, p2x - p1x);
       const headLen = 8;
@@ -231,8 +299,8 @@ export default function Transformation3DModule() {
       ctx.rotate(angle);
       ctx.beginPath();
       ctx.moveTo(0, 0);
-      ctx.lineTo(-headLen, headLen/2);
-      ctx.lineTo(-headLen, -headLen/2);
+      ctx.lineTo(-headLen, headLen / 2);
+      ctx.lineTo(-headLen, -headLen / 2);
       ctx.closePath();
       ctx.fillStyle = color;
       ctx.fill();
@@ -247,19 +315,74 @@ export default function Transformation3DModule() {
     drawFullAxis([0, -200, 0], [0, 200, 0], '#22c55e', 'Y'); // Y
     drawFullAxis([0, 0, -200], [0, 0, 200], '#3b82f6', 'Z'); // Z
 
-    // Draw previous step if available
-    if (previousStates.length > 1) {
-      const prev = previousStates[previousStates.length - 2];
-      const prevMatrix = getCombinedMatrix(prev.tx, prev.ty, prev.tz, prev.rx, prev.ry, prev.rz, prev.sx, prev.sy, prev.sz);
-      
-      ctx.strokeStyle = 'hsl(var(--primary) / 0.3)';
-      ctx.setLineDash([2, 2]);
-      edges.forEach(([start, end]) => {
-        const [x1, y1] = project(...(cubeVertices[start] as [number, number, number]), prevMatrix);
-        const [x2, y2] = project(...(cubeVertices[end] as [number, number, number]), prevMatrix);
-        ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
-      });
-      ctx.setLineDash([]);
+    // Check if there is any scale or rotation applied
+    // If so, we hide all the dashed/dotted lines to prioritize visual clarity
+    const hasScaleOrRotation = rx !== 0 || ry !== 0 || rz !== 0 || sx !== 1 || sy !== 1 || sz !== 1;
+
+    // Draw the original untransformed cube
+    ctx.strokeStyle = 'hsl(var(--muted-foreground))';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([5, 5]);
+    edges.forEach(([start, end]) => {
+      const [x1, y1] = projectStatic(...(cubeVertices[start] as [number, number, number]));
+      const [x2, y2] = projectStatic(...(cubeVertices[end] as [number, number, number]));
+      ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+    });
+    ctx.setLineDash([]);
+
+    // Draw discrete intermediate snapshots
+    if (inputMode === "sliders" && !hasScaleOrRotation) {
+      const drawSnapshot = (matrix: number[][], dash: number[], colorAlpha: number) => {
+        ctx.strokeStyle = `hsl(var(--primary) / ${colorAlpha})`;
+        ctx.setLineDash(dash);
+        edges.forEach(([start, end]) => {
+          const [x1, y1] = project(...(cubeVertices[start] as [number, number, number]), matrix);
+          const [x2, y2] = project(...(cubeVertices[end] as [number, number, number]), matrix);
+          ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+        });
+        ctx.setLineDash([]);
+      };
+
+      const T = matrixT;
+      const RX = createRotationXMatrix(rx);
+      const RY = createRotationYMatrix(ry);
+      const RZ = createRotationZMatrix(rz);
+      const R = multiplyMatrices(multiplyMatrices(RX, RY), RZ);
+      const S = matrixS;
+
+      // M = T * R * S (applied as Scale, then Rotate, then Translate)
+      const step1Matrix = S; // Scale
+      const step2Matrix = multiplyMatrices(R, S); // Rotate * Scale
+
+      const isIdentity = (m: number[][]) =>
+        Math.abs(m[0][0] - 1) < 0.001 && Math.abs(m[1][1] - 1) < 0.001 && Math.abs(m[2][2] - 1) < 0.001 && Math.abs(m[3][3] - 1) < 0.001 &&
+        Math.abs(m[0][1]) < 0.001 && Math.abs(m[0][2]) < 0.001 && Math.abs(m[0][3]) < 0.001 &&
+        Math.abs(m[1][0]) < 0.001 && Math.abs(m[1][2]) < 0.001 && Math.abs(m[1][3]) < 0.001 &&
+        Math.abs(m[2][0]) < 0.001 && Math.abs(m[2][1]) < 0.001 && Math.abs(m[2][3]) < 0.001;
+
+      const isSameAsComb = (m: number[][]) =>
+        Math.abs(m[0][0] - combinedMatrix[0][0]) < 0.001 && Math.abs(m[0][3] - combinedMatrix[0][3]) < 0.001 &&
+        Math.abs(m[1][1] - combinedMatrix[1][1]) < 0.001 && Math.abs(m[1][3] - combinedMatrix[1][3]) < 0.001 &&
+        Math.abs(m[2][2] - combinedMatrix[2][2]) < 0.001 && Math.abs(m[2][3] - combinedMatrix[2][3]) < 0.001 &&
+        Math.abs(m[0][1] - combinedMatrix[0][1]) < 0.001 && Math.abs(m[0][2] - combinedMatrix[0][2]) < 0.001 &&
+        Math.abs(m[1][0] - combinedMatrix[1][0]) < 0.001 && Math.abs(m[1][2] - combinedMatrix[1][2]) < 0.001 &&
+        Math.abs(m[2][0] - combinedMatrix[2][0]) < 0.001 && Math.abs(m[2][1] - combinedMatrix[2][1]) < 0.001;
+
+      if (!isIdentity(step1Matrix) && !isSameAsComb(step1Matrix)) {
+        drawSnapshot(step1Matrix, [4, 4], 0.2);
+      }
+
+      const isSameAsStep1 = (m: number[][]) =>
+        Math.abs(m[0][0] - step1Matrix[0][0]) < 0.001 && Math.abs(m[0][3] - step1Matrix[0][3]) < 0.001 &&
+        Math.abs(m[1][1] - step1Matrix[1][1]) < 0.001 && Math.abs(m[1][3] - step1Matrix[1][3]) < 0.001 &&
+        Math.abs(m[2][2] - step1Matrix[2][2]) < 0.001 && Math.abs(m[2][3] - step1Matrix[2][3]) < 0.001 &&
+        Math.abs(m[0][1] - step1Matrix[0][1]) < 0.001 && Math.abs(m[0][2] - step1Matrix[0][2]) < 0.001 &&
+        Math.abs(m[1][0] - step1Matrix[1][0]) < 0.001 && Math.abs(m[1][2] - step1Matrix[1][2]) < 0.001 &&
+        Math.abs(m[2][0] - step1Matrix[2][0]) < 0.001 && Math.abs(m[2][1] - step1Matrix[2][1]) < 0.001;
+
+      if (!isIdentity(step2Matrix) && !isSameAsStep1(step2Matrix) && !isSameAsComb(step2Matrix)) {
+        drawSnapshot(step2Matrix, [2, 2], 0.4);
+      }
     }
 
     ctx.strokeStyle = 'hsl(var(--primary))';
@@ -271,29 +394,30 @@ export default function Transformation3DModule() {
     });
 
     // Draw local axes attached to the object
-    const drawLocalAxis = (dir: [number, number, number], color: string, label: string) => {
-      const [ox, oy] = project(0, 0, 0);
-      const [ex, ey] = project(...dir);
-      
-      ctx.strokeStyle = color;
-      ctx.lineWidth = 2;
-      ctx.setLineDash([2, 2]);
-      ctx.beginPath(); ctx.moveTo(ox, oy); ctx.lineTo(ex, ey); ctx.stroke();
-      ctx.setLineDash([]);
+    if (!hasScaleOrRotation) {
+      const drawLocalAxis = (dir: [number, number, number], color: string, label: string) => {
+        const [ox, oy] = project(0, 0, 0);
+        const [ex, ey] = project(...dir);
 
-      ctx.fillStyle = color;
-      ctx.font = 'bold 10px Inter';
-      ctx.fillText(label, ex + 5, ey + 5);
-    };
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2;
+        ctx.setLineDash([2, 2]);
+        ctx.beginPath(); ctx.moveTo(ox, oy); ctx.lineTo(ex, ey); ctx.stroke();
+        ctx.setLineDash([]);
 
-    drawLocalAxis([80, 0, 0], '#ef4444', 'X_local');
-    drawLocalAxis([0, 80, 0], '#22c55e', 'Y_local');
+        ctx.fillStyle = color;
+        ctx.font = 'bold 10px Inter';
+        ctx.fillText(label, ex + 5, ey + 5);
+      };
 
-  }, [tx, ty, tz, rx, ry, rz, sx, sy, sz, customMatrix, inputMode, previousStates]);
+      drawLocalAxis([80, 0, 0], '#ef4444', 'X_local');
+      drawLocalAxis([0, 80, 0], '#22c55e', 'Y_local');
+    }
+  }, [matrixT, rx, ry, rz, matrixS, customMatrix, inputMode]);
 
-  const T = createTranslationMatrix(tx, ty, tz);
+  const T = matrixT;
   const R = multiplyMatrices(multiplyMatrices(createRotationXMatrix(rx), createRotationYMatrix(ry)), createRotationZMatrix(rz));
-  const S = createScaleMatrix(sx, sy, sz);
+  const S = matrixS;
   const M = getCombinedMatrix();
 
   return (
@@ -338,7 +462,14 @@ export default function Transformation3DModule() {
                   ].map((item) => (
                     <div key={item.label} className="space-y-0.5">
                       <Label className="text-[9px] uppercase tracking-wider">{item.label}: {item.val}°</Label>
-                      <Slider value={[item.val]} onValueChange={([v]) => item.set(v)} min={-180} max={180} step={1} className="py-1" />
+                      <Slider 
+                        value={[item.val]} 
+                        onValueChange={([v]) => item.set(v)} 
+                        min={-180} 
+                        max={180} 
+                        step={1} 
+                        className="py-1" 
+                      />
                     </div>
                   ))}
                 </div>
@@ -352,7 +483,14 @@ export default function Transformation3DModule() {
                   ].map((item) => (
                     <div key={item.label} className="space-y-0.5">
                       <Label className="text-[9px] uppercase tracking-wider">{item.label}: {item.val.toFixed(2)}</Label>
-                      <Slider value={[item.val]} onValueChange={([v]) => item.set(v)} min={0.1} max={3} step={0.1} className="py-1" />
+                      <Slider 
+                        value={[item.val]} 
+                        onValueChange={([v]) => item.set(v)} 
+                        min={0.1} 
+                        max={3} 
+                        step={0.1} 
+                        className="py-1" 
+                      />
                     </div>
                   ))}
                 </div>
@@ -420,7 +558,52 @@ export default function Transformation3DModule() {
               <>
                 <div className="space-y-1">
                   <Label className="text-[10px] font-bold text-muted-foreground uppercase">Translation (T)</Label>
-                  <pre className="text-[9px] font-mono bg-muted p-2 rounded overflow-x-auto leading-tight">{formatMatrix(T)}</pre>
+                  <div className="grid gap-1 bg-muted p-2 rounded relative" data-testid="matrix-translation">
+                    {T.some((row, i) => row.some((v, j) => (j === 3 && i < 3) && (v < -150 || v > 150))) && (
+                      <div className="absolute -top-5 right-0 text-[8px] text-red-500 font-medium">
+                        Must be between -150 and 150
+                      </div>
+                    )}
+                    {T.map((row, i) => (
+                      <div key={i} className="grid grid-cols-4 gap-1">
+                        {row.map((val, j) => {
+                          const isEditable = j === 3 && i < 3;
+                          const isInvalid = isEditable && (val < -150 || val > 150);
+                          return (
+                            <Input
+                              key={`t-${i}-${j}`}
+                              type="number"
+                              value={Number.parseFloat(val.toFixed(2))}
+                              onChange={(e) => {
+                                if (!isEditable) return;
+                                const numStr = e.target.value;
+                                const numOrigin = numStr === '' ? 0 : parseFloat(numStr);
+                                setMatrixT(prev => {
+                                  const newT = [...prev.map(r => [...r])];
+                                  newT[i][j] = numOrigin || 0;
+                                  return newT;
+                                });
+                              }}
+                              onKeyDown={(e) => {
+                                if (['e', 'E', '+'].includes(e.key)) e.preventDefault();
+                              }}
+                              min={-150}
+                              max={150}
+                              disabled={!isEditable}
+                              className={`text-center text-[9px] h-6 font-mono p-0 m-0 ${
+                                isInvalid ? 'border-red-500 focus-visible:ring-red-500 text-red-500 ' : ''
+                              }${
+                                isEditable 
+                                  ? 'bg-background' 
+                                  : 'bg-muted text-muted-foreground opacity-50'
+                              }`}
+                              step={5}
+                            />
+                          );
+                        })}
+                      </div>
+                    ))}
+                  </div>
                 </div>
                 <div className="space-y-1">
                   <Label className="text-[10px] font-bold text-muted-foreground uppercase">Rotation (R)</Label>
@@ -428,7 +611,58 @@ export default function Transformation3DModule() {
                 </div>
                 <div className="space-y-1">
                   <Label className="text-[10px] font-bold text-muted-foreground uppercase">Scale (S)</Label>
-                  <pre className="text-[9px] font-mono bg-muted p-2 rounded overflow-x-auto leading-tight">{formatMatrix(S)}</pre>
+                  <div className="grid gap-1 bg-muted p-2 rounded relative" data-testid="matrix-scale">
+                    {S.some((row, i) => row.some((v, j) => {
+                      const isScaleCell = i === j && i < 3;
+                      if (isScaleCell) return v < 0.1 || v > 3;
+                      return false;
+                    })) && (
+                      <div className="absolute -top-5 right-0 text-[8px] text-red-500 font-medium">
+                        Scale X/Y/Z must be 0.1 to 3
+                      </div>
+                    )}
+                    {S.map((row, i) => (
+                      <div key={i} className="grid grid-cols-4 gap-1">
+                        {row.map((val, j) => {
+                          const isScaleCell = i === j && i < 3;
+                          const min = 0.1;
+                          const max = 3;
+                          const isInvalid = isScaleCell && (val < min || val > max);
+                          return (
+                            <Input
+                              key={`s-${i}-${j}`}
+                              type="number"
+                              value={Number.parseFloat(val.toFixed(2))}
+                              onChange={(e) => {
+                                if (!isScaleCell) return;
+                                const numStr = e.target.value;
+                                const numOrigin = numStr === '' ? 0 : parseFloat(numStr);
+                                setMatrixS(prev => {
+                                  const newS = [...prev.map(r => [...r])];
+                                  newS[i][j] = numOrigin || 0;
+                                  return newS;
+                                });
+                              }}
+                              onKeyDown={(e) => {
+                                if (['e', 'E', '+'].includes(e.key)) e.preventDefault();
+                              }}
+                              min={min}
+                              max={max}
+                              disabled={!isScaleCell}
+                              className={`text-center text-[9px] h-6 font-mono p-0 m-0 ${
+                                isInvalid ? 'border-red-500 focus-visible:ring-red-500 text-red-500 ' : ''
+                              }${
+                                isScaleCell 
+                                  ? 'bg-background' 
+                                  : 'bg-muted text-muted-foreground opacity-50'
+                              }`}
+                              step={0.1}
+                            />
+                          );
+                        })}
+                      </div>
+                    ))}
+                  </div>
                 </div>
                 <div className="space-y-1">
                   <Label className="text-[10px] font-bold text-muted-foreground uppercase">Combined (M)</Label>
